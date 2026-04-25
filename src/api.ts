@@ -1,6 +1,6 @@
 import type { Policy, PolicyForm, PolicyVersion, User } from './types';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:4001';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '';
 
 function getAuthHeaders(): HeadersInit {
   const token = localStorage.getItem('gcsd-policy-token');
