@@ -405,10 +405,10 @@ Only include policy IDs that are directly relevant to the question. If no polici
   }
 });
 
-// Serve the built React app in production
-if (process.env.NODE_ENV === 'production') {
-  const distPath = join(__dirname, '..', 'dist');
-  const indexPath = join(distPath, 'index.html');
+// Serve the built React app when dist exists
+const distPath = join(__dirname, '..', 'dist');
+const indexPath = join(distPath, 'index.html');
+if (fs.existsSync(indexPath)) {
 
   // Inject a fetch patch before the bundle runs so any hardcoded localhost:4001
   // URLs are rewritten to relative paths at runtime.
