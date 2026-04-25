@@ -1,6 +1,6 @@
 import type { Policy, PolicyForm, PolicyVersion, User } from './types';
 
-const API_BASE_URL = import.meta.env.MODE === 'production' ? '' : 'http://localhost:4001';
+const API_BASE_URL = window.location.hostname === 'localhost' ? 'http://localhost:4001' : '';
 
 function getAuthHeaders(): HeadersInit {
   const token = localStorage.getItem('gcsd-policy-token');
