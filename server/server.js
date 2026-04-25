@@ -337,7 +337,7 @@ app.delete('/policies/:id', requireAuth, requireRole(['admin']), (req, res) => {
   res.status(204).send();
 });
 
-app.post('/ai-search', requireAuth, async (req, res) => {
+app.post('/ai-search', async (req, res) => {
   const { query } = req.body;
   if (!query?.trim()) {
     return res.status(400).json({ message: 'Query is required.' });

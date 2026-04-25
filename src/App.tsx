@@ -137,7 +137,7 @@ function MainApp() {
           <div className="brand-title">GCSD Policy Manager</div>
           <div className="brand-subtitle">Browse and manage policies by role</div>
         </div>
-        {user && <AISearch />}
+        <AISearch />
         {loading ? <div className="empty-state">Loading policies…</div> : <PolicyList policies={policies} />}
         {canEdit && (
           <button className="primary-button" type="button" onClick={() => navigate('/edit/new')}>
