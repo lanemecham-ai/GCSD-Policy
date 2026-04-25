@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/Lane/saip-platform/app/\\(protected\\)/students/**)",
+      "Read(//c/Users/Lane/saip-platform/**)",
+      "Bash(grep -E \"\\\\.json$|\\\\.md$|\\\\.ts$\")"
+    ]
+  }
+}
