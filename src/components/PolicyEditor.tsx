@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Policy, PolicyForm } from '../types';
 import { SECTIONS } from '../data/sections';
+import RichTextEditor from './RichTextEditor';
 
 const CATEGORIES = SECTIONS.map((s) => s.title);
 
@@ -131,7 +132,7 @@ export default function PolicyEditor({ policy, onSave, onDelete, canDelete }: Po
 
         <div className="field-group">
           <label className="field-label">Content</label>
-          <textarea value={content} onChange={(event) => setContent(event.target.value)} placeholder="Full policy text" />
+          <RichTextEditor key={existingPolicy?.id ?? 'new'} value={content} onChange={setContent} />
         </div>
       </form>
 

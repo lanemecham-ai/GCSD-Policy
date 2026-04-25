@@ -36,7 +36,7 @@ export default function PolicyViewer({ policy, canEdit }: PolicyViewerProps) {
       </div>
       <p>{policy.summary}</p>
       <hr />
-      <div style={{ whiteSpace: 'pre-wrap', marginTop: '18px' }}>{policy.content}</div>
+      <div className="policy-content" dangerouslySetInnerHTML={{ __html: policy.content }} />
     </div>
   );
 }

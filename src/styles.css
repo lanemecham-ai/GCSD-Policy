@@ -511,3 +511,129 @@ textarea {
   border-top: 1px solid #e5e7eb;
   padding: 4px 12px;
 }
+
+/* ── Rich text editor ───────────────────────────────────────────────────── */
+
+.rich-editor {
+  margin-top: 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.rich-editor:focus-within {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.rich-editor-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 10px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f9fafb;
+  flex-wrap: wrap;
+}
+
+.rich-editor-toolbar button {
+  width: auto;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 9px;
+  margin-top: 0;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  transition: background 0.1s;
+}
+
+.rich-editor-toolbar button:hover {
+  background: #e5e7eb;
+}
+
+.rich-editor-toolbar button.active {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.rich-editor-toolbar button:first-child { font-style: normal; }
+.rich-editor-toolbar button:nth-child(2) { font-style: italic; }
+
+.rich-editor-divider {
+  width: 1px;
+  height: 18px;
+  background: #d1d5db;
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+.rich-editor .ProseMirror {
+  padding: 14px 16px;
+  min-height: 220px;
+  outline: none;
+  line-height: 1.65;
+  font-size: 15px;
+  color: #1f2937;
+}
+
+.rich-editor .ProseMirror p { margin: 0 0 10px; }
+.rich-editor .ProseMirror p:last-child { margin-bottom: 0; }
+.rich-editor .ProseMirror h1 { font-size: 22px; margin: 20px 0 8px; }
+.rich-editor .ProseMirror h2 { font-size: 18px; margin: 18px 0 6px; }
+.rich-editor .ProseMirror h3 { font-size: 15px; margin: 14px 0 4px; }
+.rich-editor .ProseMirror ul,
+.rich-editor .ProseMirror ol { margin: 0 0 10px; padding-left: 24px; }
+.rich-editor .ProseMirror li { margin-bottom: 3px; }
+.rich-editor .ProseMirror blockquote {
+  border-left: 3px solid #d1d5db;
+  margin: 0 0 10px;
+  padding: 2px 14px;
+  color: #6b7280;
+}
+
+.rich-editor .ProseMirror.ProseMirror-focused { outline: none; }
+
+/* ── Policy content (rendered HTML in viewer) ───────────────────────────── */
+
+.policy-content {
+  margin-top: 18px;
+  line-height: 1.7;
+  font-size: 15px;
+  color: #1f2937;
+}
+
+.policy-content p { margin: 0 0 12px; }
+.policy-content h1 { font-size: 22px; font-weight: 700; margin: 24px 0 8px; color: #111827; }
+.policy-content h2 { font-size: 18px; font-weight: 700; margin: 20px 0 6px; color: #111827; }
+.policy-content h3 { font-size: 15px; font-weight: 700; margin: 16px 0 4px; color: #111827; }
+.policy-content ul,
+.policy-content ol { margin: 0 0 12px; padding-left: 24px; }
+.policy-content li { margin-bottom: 4px; }
+.policy-content strong { font-weight: 700; }
+.policy-content em { font-style: italic; }
+.policy-content blockquote {
+  border-left: 3px solid #d1d5db;
+  margin: 0 0 12px;
+  padding: 2px 14px;
+  color: #6b7280;
+}
+.policy-content code {
+  background: #f3f4f6;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-family: monospace;
+  font-size: 0.9em;
+}
+.policy-content pre {
+  background: #f3f4f6;
+  border-radius: 8px;
+  padding: 14px 16px;
+  overflow-x: auto;
+  margin-bottom: 12px;
+}
+.policy-content pre code { background: none; padding: 0; }
