@@ -408,6 +408,16 @@ Only include policy IDs that are directly relevant to the question. If no polici
 // Serve the built React app in production
 if (process.env.NODE_ENV === 'production') {
   const distPath = join(__dirname, '..', 'dist');
+  // Rewrite any hardcoded localhost:4001 references in JS bundles to relative URLs
+  app.get('/assets/*.js', (req, res) => {
+    const filePath = join(distPath, req.path);
+    try {
+      const content = fs.readFileSync(filePath, 'utf8').replaceAll('http://localhost:4001', '');
+      res.type('application/javascript').send(content);
+    } catch {
+      res.status(404).end();
+    }
+  });
   app.use(express.static(distPath));
   app.get('*', (_req, res) => res.sendFile(join(distPath, 'index.html')));
 }
