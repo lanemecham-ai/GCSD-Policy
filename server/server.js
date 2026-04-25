@@ -408,18 +408,31 @@ Only include policy IDs that are directly relevant to the question. If no polici
 // Serve the built React app in production
 if (process.env.NODE_ENV === 'production') {
   const distPath = join(__dirname, '..', 'dist');
-  // Rewrite any hardcoded localhost:4001 references in JS bundles to relative URLs
-  app.get('/assets/*.js', (req, res) => {
-    const filePath = join(distPath, req.path);
+  const indexPath = join(distPath, 'index.html');
+
+  // Inject a fetch patch before the bundle runs so any hardcoded localhost:4001
+  // URLs are rewritten to relative paths at runtime.
+  const fetchPatch = `<script>
+    (function(){
+      var _f = window.fetch;
+      window.fetch = function(u, o) {
+        if (typeof u === 'string') u = u.replace('http://localhost:4001', '');
+        return _f.call(this, u, o);
+      };
+    })();
+  </script>`;
+
+  function serveIndex(_req, res) {
     try {
-      const content = fs.readFileSync(filePath, 'utf8').replaceAll('http://localhost:4001', '');
-      res.type('application/javascript').send(content);
+      const html = fs.readFileSync(indexPath, 'utf8').replace('</head>', fetchPatch + '</head>');
+      res.type('text/html').send(html);
     } catch {
-      res.status(404).end();
+      res.status(500).send('App not built.');
     }
-  });
-  app.use(express.static(distPath));
-  app.get('*', (_req, res) => res.sendFile(join(distPath, 'index.html')));
+  }
+
+  app.use(express.static(distPath, { index: false }));
+  app.get('*', serveIndex);
 }
 
 app.listen(PORT, () => {
