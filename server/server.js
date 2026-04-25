@@ -251,17 +251,17 @@ app.get('/auth/me', requireAuth, (req, res) => {
   res.json(user);
 });
 
-app.get('/policies', requireAuth, (req, res) => {
+app.get('/policies', (req, res) => {
   const policies = all('SELECT * FROM policies ORDER BY updatedAt DESC');
   res.json(policies);
 });
 
-app.get('/policies/top', requireAuth, (req, res) => {
+app.get('/policies/top', (req, res) => {
   const top = all('SELECT * FROM policies ORDER BY views DESC, updatedAt DESC LIMIT 9');
   res.json(top);
 });
 
-app.get('/policies/:id', requireAuth, (req, res) => {
+app.get('/policies/:id', (req, res) => {
   const policy = getPolicyById(req.params.id);
   if (!policy) {
     return res.status(404).json({ message: 'Policy not found.' });
@@ -270,7 +270,7 @@ app.get('/policies/:id', requireAuth, (req, res) => {
   res.json(policy);
 });
 
-app.get('/policies/:id/versions', requireAuth, (req, res) => {
+app.get('/policies/:id/versions', (req, res) => {
   const policy = getPolicyById(req.params.id);
   if (!policy) {
     return res.status(404).json({ message: 'Policy not found.' });

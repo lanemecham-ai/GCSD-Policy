@@ -8,13 +8,17 @@ export default function Header() {
   return (
     <div className="topbar">
       <div className="topbar-actions">
-        {user && (
+        {user ? (
           <>
             <span className="topbar-user">{user.username} • {user.role}</span>
-            <button className="secondary-button" type="button" onClick={() => { logout(); navigate('/login'); }}>
+            <button className="secondary-button" type="button" onClick={() => { logout(); navigate('/'); }}>
               Sign out
             </button>
           </>
+        ) : (
+          <button className="primary-button" type="button" onClick={() => navigate('/login')}>
+            Sign in
+          </button>
         )}
       </div>
     </div>

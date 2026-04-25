@@ -1,10 +1,12 @@
 import { FormEvent, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuth();
+  const from = (location.state as { from?: { pathname: string } })?.from?.pathname ?? '/';
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -17,7 +19,7 @@ export default function LoginPage() {
 
     try {
       await login(username.trim(), password);
-      navigate('/');
+      navigate(from, { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {
@@ -29,7 +31,7 @@ export default function LoginPage() {
     <div className="login-page">
       <div className="card login-card">
         <h1>Sign in</h1>
-        <p>Use one of the seeded accounts: admin/editor/viewer.</p>
+        <p>Sign in to manage and edit district policies.</p>
         <form onSubmit={handleSubmit}>
           <div className="field-group">
             <label className="field-label">Username</label>

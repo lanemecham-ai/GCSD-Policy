@@ -137,11 +137,13 @@ function MainApp() {
           <div className="brand-title">GCSD Policy Manager</div>
           <div className="brand-subtitle">Browse and manage policies by role</div>
         </div>
-        <AISearch />
+        {user && <AISearch />}
         {loading ? <div className="empty-state">Loading policies…</div> : <PolicyList policies={policies} />}
-        <button className="primary-button" type="button" onClick={() => navigate('/edit/new')} disabled={!canEdit}>
-          + New Policy
-        </button>
+        {canEdit && (
+          <button className="primary-button" type="button" onClick={() => navigate('/edit/new')}>
+            + New Policy
+          </button>
+        )}
         {error && <div className="form-error">{error}</div>}
       </aside>
 
@@ -152,7 +154,7 @@ function MainApp() {
           <Route path="ai-search" element={<AISearchResults policies={policies} />} />
           <Route path="policies/:policyId" element={<PolicyViewerRoute />} />
           <Route path="policies/:policyId/history" element={<PolicyHistory />} />
-          <Route path="edit/:policyId" element={<PolicyEditorRoute onSave={handleSave} onDelete={handleDelete} canDelete={canDelete} />} />
+          <Route path="edit/:policyId" element={<RequireAuth><PolicyEditorRoute onSave={handleSave} onDelete={handleDelete} canDelete={canDelete} /></RequireAuth>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
@@ -164,7 +166,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
-      <Route path="/*" element={<RequireAuth><MainApp /></RequireAuth>} />
+      <Route path="/*" element={<MainApp />} />
     </Routes>
   );
 }
