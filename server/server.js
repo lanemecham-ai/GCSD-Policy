@@ -422,15 +422,15 @@ app.post('/ai-search', async (req, res) => {
     return res.status(503).json({ message: 'AI search is not configured. Set the ANTHROPIC_API_KEY environment variable.' });
   }
 
-  const policies = all('SELECT id, title, category, summary, content FROM policies ORDER BY title');
+  const policies = all('SELECT id, title, category, summary FROM policies ORDER BY title');
   const policiesContext = policies
-    .map((p) => `ID: ${p.id}\nTitle: ${p.title}\nSection: ${p.category}\nSummary: ${p.summary}\nContent: ${p.content}`)
+    .map((p) => `ID: ${p.id}\nTitle: ${p.title}\nSection: ${p.category}\nSummary: ${p.summary}`)
     .join('\n\n---\n\n');
 
   try {
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 1024,
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 256,
       system: [
         {
           type: 'text',
