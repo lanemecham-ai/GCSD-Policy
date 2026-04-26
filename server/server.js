@@ -13,7 +13,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const PORT = process.env.PORT || 4001;
 const JWT_SECRET = process.env.JWT_SECRET || 'gcsd-policy-secret';
-const DB_PATH = join(__dirname, 'data.db');
+const DB_PATH = process.env.DB_PATH || join(__dirname, 'data.db');
 const anthropic = process.env.ANTHROPIC_API_KEY
   ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
   : null;
