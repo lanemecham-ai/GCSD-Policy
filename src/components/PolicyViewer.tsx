@@ -35,6 +35,22 @@ export default function PolicyViewer({ policy, canEdit }: PolicyViewerProps) {
         </div>
       </div>
       <p>{policy.summary}</p>
+
+      {policy.forms?.length > 0 && (
+        <div className="associated-forms">
+          <h3 className="associated-forms-title">Associated Forms</h3>
+          <ul className="associated-forms-list">
+            {policy.forms.map((f, i) => (
+              <li key={f.id ?? i}>
+                <a href={f.url} target="_blank" rel="noreferrer" className="associated-form-link">
+                  {f.title}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <hr />
       <div className="policy-content" dangerouslySetInnerHTML={{ __html: policy.content }} />
     </div>

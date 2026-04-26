@@ -14,6 +14,12 @@ export type User = {
   role: Role;
 };
 
+export type FormLink = {
+  id?: string;
+  title: string;
+  url: string;
+};
+
 export type Policy = {
   id: string;
   title: string;
@@ -22,6 +28,7 @@ export type Policy = {
   content: string;
   createdAt: string;
   updatedAt: string;
+  forms: FormLink[];
 };
 
 export type PolicyForm = {
@@ -30,6 +37,7 @@ export type PolicyForm = {
   category: string;
   summary: string;
   content: string;
+  forms: FormLink[];
 };
 
 export type PolicyVersion = {

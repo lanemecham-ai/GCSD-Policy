@@ -137,6 +137,16 @@ function initDatabase() {
   }
 
   run(
+    `CREATE TABLE IF NOT EXISTS policy_forms (
+      id TEXT PRIMARY KEY,
+      policyId TEXT NOT NULL,
+      title TEXT NOT NULL,
+      url TEXT NOT NULL,
+      sortOrder INTEGER NOT NULL DEFAULT 0
+    );`,
+  );
+
+  run(
     `CREATE TABLE IF NOT EXISTS policy_versions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       policyId TEXT NOT NULL,
@@ -273,7 +283,19 @@ function getUserById(id) {
 }
 
 function getPolicyById(id) {
-  return get('SELECT * FROM policies WHERE id = ?', [id]);
+  const policy = get('SELECT * FROM policies WHERE id = ?', [id]);
+  if (!policy) return null;
+  policy.forms = all('SELECT id, title, url, sortOrder FROM policy_forms WHERE policyId = ? ORDER BY sortOrder', [id]);
+  return policy;
+}
+
+function saveFormsForPolicy(policyId, forms = []) {
+  run('DELETE FROM policy_forms WHERE policyId = ?', [policyId]);
+  forms.forEach((f, i) => {
+    const id = `form-${policyId}-${i}-${Date.now()}`;
+    run('INSERT INTO policy_forms (id, policyId, title, url, sortOrder) VALUES (?, ?, ?, ?, ?)',
+      [id, policyId, f.title?.trim() || 'Untitled', f.url?.trim() || '', i]);
+  });
 }
 
 // Cached prompt payload for /ai-search. Rebuilt lazily on the next AI search
@@ -511,7 +533,7 @@ app.get('/policies/:id/versions', (req, res) => {
 });
 
 app.post('/policies', requireAuth, requireRole(['editor', 'admin']), (req, res) => {
-  const { id, title, category, summary, content } = req.body;
+  const { id, title, category, summary, content, forms } = req.body;
   if (!id || !title || !category || !summary || !content) {
     return res.status(400).json({ message: 'All policy fields are required.' });
   }
@@ -525,6 +547,7 @@ app.post('/policies', requireAuth, requireRole(['editor', 'admin']), (req, res) 
     'INSERT INTO policies (id, title, category, summary, content, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)',
     [id, title, category, summary, content, now, now],
   );
+  saveFormsForPolicy(id, forms);
   createVersion(id, { title, category, summary, content }, req.user.userId);
   invalidatePoliciesContextCache();
   res.status(201).json(getPolicyById(id));
@@ -536,7 +559,7 @@ app.put('/policies/:id', requireAuth, requireRole(['editor', 'admin']), (req, re
     return res.status(404).json({ message: 'Policy not found.' });
   }
 
-  const { title, category, summary, content } = req.body;
+  const { title, category, summary, content, forms } = req.body;
   if (!title || !category || !summary || !content) {
     return res.status(400).json({ message: 'All policy fields are required.' });
   }
@@ -546,6 +569,7 @@ app.put('/policies/:id', requireAuth, requireRole(['editor', 'admin']), (req, re
     'UPDATE policies SET title = ?, category = ?, summary = ?, content = ?, updatedAt = ? WHERE id = ?',
     [title, category, summary, content, now, req.params.id],
   );
+  saveFormsForPolicy(req.params.id, forms);
   createVersion(req.params.id, { title, category, summary, content }, req.user.userId);
   invalidatePoliciesContextCache();
   res.json(getPolicyById(req.params.id));
@@ -557,6 +581,7 @@ app.delete('/policies/:id', requireAuth, requireRole(['admin']), (req, res) => {
     return res.status(404).json({ message: 'Policy not found.' });
   }
 
+  run('DELETE FROM policy_forms WHERE policyId = ?', [req.params.id]);
   run('DELETE FROM policy_versions WHERE policyId = ?', [req.params.id]);
   run('DELETE FROM policies WHERE id = ?', [req.params.id]);
   invalidatePoliciesContextCache();

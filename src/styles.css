@@ -679,6 +679,78 @@ textarea {
 }
 .policy-content pre code { background: none; padding: 0; }
 
+/* ── Associated Forms ───────────────────────────────────────────────────── */
+
+.associated-forms {
+  margin: 16px 0;
+  padding: 16px 20px;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 12px;
+}
+
+.associated-forms-title {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #0369a1;
+}
+
+.associated-forms-list {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.associated-form-link {
+  color: #0369a1;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.associated-form-link:hover {
+  text-decoration: underline;
+}
+
+/* ── Form link editor ───────────────────────────────────────────────────── */
+
+.form-links-editor {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-link-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.form-link-input {
+  margin-top: 0;
+}
+
+.form-link-remove {
+  width: auto;
+  padding: 10px 14px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.form-link-add {
+  width: auto;
+  align-self: flex-start;
+  font-size: 13px;
+  padding: 10px 16px;
+}
+
 /* ── User management ────────────────────────────────────────────────────── */
 
 .user-mgmt {
