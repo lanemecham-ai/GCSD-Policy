@@ -83,9 +83,16 @@ function MainApp() {
   const [policies, setPolicies] = useState<Policy[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [aiQuery, setAiQuery] = useState<string | null>(null);
+  const [aiSearchKey, setAiSearchKey] = useState(0);
 
   const canEdit = user?.role === 'admin' || user?.role === 'editor';
   const canDelete = user?.role === 'admin';
+
+  function handleSearch(query: string) {
+    setAiQuery(query);
+    setAiSearchKey((k) => k + 1);
+  }
 
   const loadPolicies = useCallback(async () => {
     setLoading(true);
@@ -138,7 +145,7 @@ function MainApp() {
           <div className="brand-title">GCSD Policy Manager</div>
           <div className="brand-subtitle">Browse and manage policies by role</div>
         </div>
-        <AISearch />
+        <AISearch onSearch={handleSearch} />
         {loading ? <div className="empty-state">Loading policies…</div> : <PolicyList policies={policies} />}
         {canEdit && (
           <button className="primary-button" type="button" onClick={() => navigate('/edit/new')}>
@@ -155,9 +162,16 @@ function MainApp() {
 
       <main className="content">
         <Header />
+        {aiQuery && (
+          <AISearchResults
+            key={aiSearchKey}
+            query={aiQuery}
+            policies={policies}
+            onClear={() => { setAiQuery(null); navigate('/'); }}
+          />
+        )}
         <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="ai-search" element={<AISearchResults policies={policies} />} />
+          <Route path="/" element={aiQuery ? null : <HomePage />} />
           <Route path="policies/:policyId" element={<PolicyViewerRoute />} />
           <Route path="policies/:policyId/history" element={<PolicyHistory />} />
           <Route path="edit/:policyId" element={<RequireAuth><PolicyEditorRoute onSave={handleSave} onDelete={handleDelete} canDelete={canDelete} /></RequireAuth>} />

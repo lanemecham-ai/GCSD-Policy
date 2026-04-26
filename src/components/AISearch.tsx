@@ -1,17 +1,15 @@
 import { FormEvent, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 
-export default function AISearch() {
-  const navigate = useNavigate();
+type Props = { onSearch: (query: string) => void };
+
+export default function AISearch({ onSearch }: Props) {
   const [query, setQuery] = useState('');
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
     const trimmed = query.trim();
     if (!trimmed) return;
-    // Navigate immediately so the results page can stream the response in
-    // place. The page kicks off the request itself on mount.
-    navigate('/ai-search', { state: { query: trimmed } });
+    onSearch(trimmed);
     setQuery('');
   }
 

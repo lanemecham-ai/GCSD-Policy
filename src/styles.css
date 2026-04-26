@@ -359,11 +359,14 @@ textarea {
 
 .ai-ref-card {
   display: block;
+  text-align: left;
   text-decoration: none;
+  width: 100%;
   background: #f9fafb;
   border: 1px solid #e5e7eb;
   border-radius: 12px;
   padding: 14px 16px;
+  cursor: pointer;
   transition: border-color 0.15s, background 0.15s;
 }
 
