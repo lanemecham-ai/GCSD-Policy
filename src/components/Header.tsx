@@ -21,6 +21,10 @@ export default function Header() {
           </button>
         )}
       </div>
+      <a href="https://www.garfk12.org/" className="district-link" target="_blank" rel="noreferrer">
+        <img src="/flame-logo.png" alt="GCSD" className="district-logo" />
+        <span>Return to Garfk12.org</span>
+      </a>
     </div>
   );
 }
