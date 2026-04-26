@@ -113,6 +113,30 @@ function initDatabase() {
   try { run('ALTER TABLE policies ADD COLUMN views INTEGER NOT NULL DEFAULT 0'); } catch (_) {}
 
   run(
+    `CREATE TABLE IF NOT EXISTS categories (
+      id TEXT PRIMARY KEY,
+      code TEXT NOT NULL DEFAULT '',
+      name TEXT UNIQUE NOT NULL,
+      description TEXT NOT NULL DEFAULT ''
+    );`,
+  );
+
+  const catCount = get('SELECT COUNT(*) AS count FROM categories').count;
+  if (catCount === 0) {
+    const defaultCategories = [
+      { id: 'cat-b', code: 'B', name: 'Board', description: 'Governance, meetings, officers, and superintendent relations' },
+      { id: 'cat-c', code: 'C', name: 'Finance & Operations', description: 'Budgeting, procurement, transportation, and school facilities' },
+      { id: 'cat-d', code: 'D', name: 'Personnel', description: 'Employment, conduct, benefits, leave, and evaluation' },
+      { id: 'cat-e', code: 'E', name: 'Instruction', description: 'Curriculum, assessment, special programs, and graduation' },
+      { id: 'cat-f', code: 'F', name: 'Students', description: 'Admission, health, activities, rights, and discipline' },
+      { id: 'cat-g', code: 'G', name: 'Community Relations', description: 'Public records, community use, parent rights, and partnerships' },
+    ];
+    for (const cat of defaultCategories) {
+      run('INSERT INTO categories (id, code, name, description) VALUES (?, ?, ?, ?)', [cat.id, cat.code, cat.name, cat.description]);
+    }
+  }
+
+  run(
     `CREATE TABLE IF NOT EXISTS policy_versions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       policyId TEXT NOT NULL,
@@ -388,6 +412,65 @@ app.delete('/users/:id', requireAuth, requireRole(['admin']), (req, res) => {
     }
   }
   run('DELETE FROM users WHERE id = ?', [req.params.id]);
+  res.status(204).send();
+});
+
+app.get('/categories', (req, res) => {
+  const rows = all(
+    `SELECT c.id, c.code, c.name, c.description,
+            COUNT(p.id) AS policyCount
+     FROM categories c
+     LEFT JOIN policies p ON p.category = c.name
+     GROUP BY c.id
+     ORDER BY c.code, c.name`,
+  );
+  res.json(rows);
+});
+
+app.post('/categories', requireAuth, requireRole(['admin']), (req, res) => {
+  const { code, name, description } = req.body;
+  if (!name?.trim()) {
+    return res.status(400).json({ message: 'Category name is required.' });
+  }
+  if (get('SELECT id FROM categories WHERE name = ?', [name.trim()])) {
+    return res.status(409).json({ message: 'A category with that name already exists.' });
+  }
+  const id = 'cat-' + Date.now();
+  run('INSERT INTO categories (id, code, name, description) VALUES (?, ?, ?, ?)', [
+    id, (code || '').trim(), name.trim(), (description || '').trim(),
+  ]);
+  res.status(201).json(get('SELECT * FROM categories WHERE id = ?', [id]));
+});
+
+app.put('/categories/:id', requireAuth, requireRole(['admin']), (req, res) => {
+  const cat = get('SELECT * FROM categories WHERE id = ?', [req.params.id]);
+  if (!cat) return res.status(404).json({ message: 'Category not found.' });
+  const { code, name, description } = req.body;
+  if (!name?.trim()) {
+    return res.status(400).json({ message: 'Category name is required.' });
+  }
+  const existing = get('SELECT id FROM categories WHERE name = ?', [name.trim()]);
+  if (existing && existing.id !== req.params.id) {
+    return res.status(409).json({ message: 'A category with that name already exists.' });
+  }
+  if (cat.name !== name.trim()) {
+    run('UPDATE policies SET category = ? WHERE category = ?', [name.trim(), cat.name]);
+    invalidatePoliciesContextCache();
+  }
+  run('UPDATE categories SET code = ?, name = ?, description = ? WHERE id = ?', [
+    (code || '').trim(), name.trim(), (description || '').trim(), req.params.id,
+  ]);
+  res.json(get('SELECT * FROM categories WHERE id = ?', [req.params.id]));
+});
+
+app.delete('/categories/:id', requireAuth, requireRole(['admin']), (req, res) => {
+  const cat = get('SELECT * FROM categories WHERE id = ?', [req.params.id]);
+  if (!cat) return res.status(404).json({ message: 'Category not found.' });
+  const policyCount = get('SELECT COUNT(*) AS count FROM policies WHERE category = ?', [cat.name]).count;
+  if (policyCount > 0) {
+    return res.status(400).json({ message: `Cannot delete: ${policyCount} ${policyCount === 1 ? 'policy uses' : 'policies use'} this category. Reassign them first.` });
+  }
+  run('DELETE FROM categories WHERE id = ?', [req.params.id]);
   res.status(204).send();
 });
 

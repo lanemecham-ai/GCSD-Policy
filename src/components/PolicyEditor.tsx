@@ -1,13 +1,11 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { Policy, PolicyForm } from '../types';
-import { SECTIONS } from '../data/sections';
+import type { Category, Policy, PolicyForm } from '../types';
 import RichTextEditor from './RichTextEditor';
-
-const CATEGORIES = SECTIONS.map((s) => s.title);
 
 type PolicyEditorProps = {
   policy?: Policy | null;
+  categories: Category[];
   onSave: (policy: PolicyForm) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   canDelete?: boolean;
@@ -20,12 +18,12 @@ function createId(title: string) {
     .replace(/^-+|-+$/g, '');
 }
 
-export default function PolicyEditor({ policy, onSave, onDelete, canDelete }: PolicyEditorProps) {
+export default function PolicyEditor({ policy, categories, onSave, onDelete, canDelete }: PolicyEditorProps) {
   const navigate = useNavigate();
 
   const existingPolicy = policy ?? null;
   const [title, setTitle] = useState(existingPolicy?.title ?? '');
-  const [category, setCategory] = useState(existingPolicy?.category ?? SECTIONS[0].title);
+  const [category, setCategory] = useState(existingPolicy?.category ?? categories[0]?.name ?? '');
   const [summary, setSummary] = useState(existingPolicy?.summary ?? '');
   const [content, setContent] = useState(existingPolicy?.content ?? '');
   const [saving, setSaving] = useState(false);
@@ -34,7 +32,7 @@ export default function PolicyEditor({ policy, onSave, onDelete, canDelete }: Po
 
   useEffect(() => {
     setTitle(existingPolicy?.title ?? '');
-    setCategory(existingPolicy?.category ?? SECTIONS[0].title);
+    setCategory(existingPolicy?.category ?? categories[0]?.name ?? '');
     setSummary(existingPolicy?.summary ?? '');
     setContent(existingPolicy?.content ?? '');
     setConfirmingDelete(false);
@@ -114,12 +112,12 @@ export default function PolicyEditor({ policy, onSave, onDelete, canDelete }: Po
         <div className="field-group">
           <label className="field-label">Category</label>
           <select value={category} onChange={(event) => setCategory(event.target.value)}>
-            {CATEGORIES.map((cat, i) => (
-              <option key={cat} value={cat}>
-                {`Section ${SECTIONS[i].code} — ${cat}`}
+            {categories.map((cat) => (
+              <option key={cat.id} value={cat.name}>
+                {cat.code ? `${cat.code} — ${cat.name}` : cat.name}
               </option>
             ))}
-            {!CATEGORIES.includes(category) && (
+            {!categories.some((c) => c.name === category) && category && (
               <option value={category}>{category}</option>
             )}
           </select>

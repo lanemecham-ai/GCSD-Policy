@@ -1,5 +1,13 @@
 export type Role = 'viewer' | 'editor' | 'admin';
 
+export type Category = {
+  id: string;
+  code: string;
+  name: string;
+  description: string;
+  policyCount?: number;
+};
+
 export type User = {
   id: string;
   username: string;

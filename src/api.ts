@@ -1,4 +1,4 @@
-import type { Policy, PolicyForm, PolicyVersion, User } from './types';
+import type { Category, Policy, PolicyForm, PolicyVersion, User } from './types';
 
 const API_BASE_URL = window.location.hostname === 'localhost' ? 'http://localhost:4001' : '';
 
@@ -87,6 +87,42 @@ export async function fetchPolicyVersions(id: string) {
     headers: { ...getAuthHeaders() } as HeadersInit,
   });
   return handleResponse<PolicyVersion[]>(response);
+}
+
+export async function fetchCategories() {
+  const response = await fetch(`${API_BASE_URL}/categories`, {
+    headers: { ...getAuthHeaders() } as HeadersInit,
+  });
+  return handleResponse<Category[]>(response);
+}
+
+export async function createCategory(data: { code: string; name: string; description: string }) {
+  const response = await fetch(`${API_BASE_URL}/categories`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() } as HeadersInit,
+    body: JSON.stringify(data),
+  });
+  return handleResponse<Category>(response);
+}
+
+export async function updateCategory(id: string, data: { code: string; name: string; description: string }) {
+  const response = await fetch(`${API_BASE_URL}/categories/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() } as HeadersInit,
+    body: JSON.stringify(data),
+  });
+  return handleResponse<Category>(response);
+}
+
+export async function deleteCategory(id: string) {
+  const response = await fetch(`${API_BASE_URL}/categories/${id}`, {
+    method: 'DELETE',
+    headers: { ...getAuthHeaders() } as HeadersInit,
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.message || 'Delete request failed');
+  }
 }
 
 export async function fetchUsers() {

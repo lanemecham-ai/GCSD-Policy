@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import type { Policy } from '../types';
-import { SECTIONS } from '../data/sections';
+import type { Category, Policy } from '../types';
 
 type Props = {
   policies: Policy[];
+  categories: Category[];
 };
 
 function PolicyItem({ policy }: { policy: Policy }) {
@@ -21,7 +21,7 @@ function PolicyItem({ policy }: { policy: Policy }) {
   );
 }
 
-export default function PolicyList({ policies }: Props) {
+export default function PolicyList({ policies, categories }: Props) {
   const [openSections, setOpenSections] = useState<Set<string>>(() => new Set());
 
   const grouped = useMemo(() => {
@@ -35,13 +35,13 @@ export default function PolicyList({ policies }: Props) {
   }, [policies]);
 
   const sortedCategories = useMemo(() => {
-    const knownTitles = SECTIONS.map((s) => s.title);
+    const knownNames = categories.map((c) => c.name);
     const all = Array.from(grouped.keys());
     return [
-      ...knownTitles.filter((t) => grouped.has(t)),
-      ...all.filter((t) => !knownTitles.includes(t)).sort(),
+      ...knownNames.filter((n) => grouped.has(n)),
+      ...all.filter((n) => !knownNames.includes(n)).sort(),
     ];
-  }, [grouped]);
+  }, [grouped, categories]);
 
   function toggle(cat: string) {
     setOpenSections((prev) => {
@@ -61,8 +61,8 @@ export default function PolicyList({ policies }: Props) {
       {sortedCategories.map((cat) => {
         const sectionPolicies = grouped.get(cat) ?? [];
         const isOpen = openSections.has(cat);
-        const section = SECTIONS.find((s) => s.title === cat);
-        const label = section ? `Section ${section.code} — ${section.title}` : cat;
+        const catDef = categories.find((c) => c.name === cat);
+        const label = catDef?.code ? `${catDef.code} — ${cat}` : cat;
 
         return (
           <div key={cat} className="section-group">

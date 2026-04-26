@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Navigate, Route, Routes, useNavigate, useParams } from 'react-router-dom';
-import { createPolicy, deletePolicy, fetchPolicy, fetchPolicies, updatePolicy } from './api';
-import type { Policy, PolicyForm } from './types';
+import { createPolicy, deletePolicy, fetchCategories, fetchPolicy, fetchPolicies, updatePolicy } from './api';
+import type { Category, Policy, PolicyForm } from './types';
 import Header from './components/Header';
 import PolicyEditor from './components/PolicyEditor';
 import PolicyHistory from './components/PolicyHistory';
@@ -10,6 +10,7 @@ import PolicyViewer from './components/PolicyViewer';
 import RequireAuth from './components/RequireAuth';
 import AISearch from './components/AISearch';
 import AISearchResults from './pages/AISearchResults';
+import CategoryManagement from './pages/CategoryManagement';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import UserManagement from './pages/UserManagement';
@@ -33,32 +34,30 @@ function PolicyViewerRoute() {
       .finally(() => setLoading(false));
   }, [policyId]);
 
-  if (loading) {
-    return <div className="card">Loading policy…</div>;
-  }
-
-  if (error) {
-    return <div className="card">{error}</div>;
-  }
-
+  if (loading) return <div className="card">Loading policy…</div>;
+  if (error) return <div className="card">{error}</div>;
   return <PolicyViewer policy={policy} canEdit={canEdit} />;
 }
 
-function PolicyEditorRoute({ onSave, onDelete, canDelete }: { onSave: (policy: PolicyForm) => Promise<void>; onDelete: (id: string) => Promise<void>; canDelete: boolean; }) {
+function PolicyEditorRoute({
+  categories,
+  onSave,
+  onDelete,
+  canDelete,
+}: {
+  categories: Category[];
+  onSave: (policy: PolicyForm) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
+  canDelete: boolean;
+}) {
   const { policyId } = useParams();
   const [policy, setPolicy] = useState<Policy | null>(null);
   const [loading, setLoading] = useState(policyId !== 'new');
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (policyId === 'new') {
-      setPolicy(null);
-      setLoading(false);
-      return;
-    }
-
+    if (policyId === 'new') { setPolicy(null); setLoading(false); return; }
     if (!policyId) return;
-
     setLoading(true);
     fetchPolicy(policyId)
       .then(setPolicy)
@@ -66,21 +65,16 @@ function PolicyEditorRoute({ onSave, onDelete, canDelete }: { onSave: (policy: P
       .finally(() => setLoading(false));
   }, [policyId]);
 
-  if (loading) {
-    return <div className="card">Loading editor…</div>;
-  }
-
-  if (error) {
-    return <div className="card">{error}</div>;
-  }
-
-  return <PolicyEditor policy={policy} onSave={onSave} onDelete={onDelete} canDelete={canDelete} />;
+  if (loading) return <div className="card">Loading editor…</div>;
+  if (error) return <div className="card">{error}</div>;
+  return <PolicyEditor policy={policy} categories={categories} onSave={onSave} onDelete={onDelete} canDelete={canDelete} />;
 }
 
 function MainApp() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [policies, setPolicies] = useState<Policy[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [aiQuery, setAiQuery] = useState<string | null>(null);
@@ -98,8 +92,9 @@ function MainApp() {
     setLoading(true);
     setError('');
     try {
-      const data = await fetchPolicies();
+      const [data, cats] = await Promise.all([fetchPolicies(), fetchCategories()]);
       setPolicies(data);
+      setCategories(cats);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to fetch policies.');
     } finally {
@@ -107,21 +102,22 @@ function MainApp() {
     }
   }, []);
 
-  useEffect(() => {
-    loadPolicies();
-  }, [loadPolicies]);
+  const reloadCategories = useCallback(async () => {
+    try {
+      const [cats, data] = await Promise.all([fetchCategories(), fetchPolicies()]);
+      setCategories(cats);
+      setPolicies(data);
+    } catch (_) {}
+  }, []);
+
+  useEffect(() => { loadPolicies(); }, [loadPolicies]);
 
   const handleSave = useCallback(
     async (updated: PolicyForm) => {
       const exists = policies.some((policy) => policy.id === updated.id);
-      const saved = exists
-        ? await updatePolicy(updated.id, updated)
-        : await createPolicy(updated);
-
+      const saved = exists ? await updatePolicy(updated.id, updated) : await createPolicy(updated);
       setPolicies((current) => {
-        if (exists) {
-          return current.map((policy) => (policy.id === saved.id ? saved : policy));
-        }
+        if (exists) return current.map((policy) => (policy.id === saved.id ? saved : policy));
         return [saved, ...current];
       });
       navigate(`/policies/${saved.id}`);
@@ -152,16 +148,23 @@ function MainApp() {
           <div className="brand-subtitle">Browse and manage policies by role</div>
         </div>
         <AISearch onSearch={handleSearch} />
-        {loading ? <div className="empty-state">Loading policies…</div> : <PolicyList policies={policies} />}
+        {loading
+          ? <div className="empty-state">Loading policies…</div>
+          : <PolicyList policies={policies} categories={categories} />}
         {canEdit && (
           <button className="primary-button" type="button" onClick={() => navigate('/edit/new')}>
             + New Policy
           </button>
         )}
         {user?.role === 'admin' && (
-          <button className="secondary-button" type="button" onClick={() => navigate('/admin/users')}>
-            Manage Users
-          </button>
+          <>
+            <button className="secondary-button" type="button" onClick={() => navigate('/admin/categories')}>
+              Manage Categories
+            </button>
+            <button className="secondary-button" type="button" onClick={() => navigate('/admin/users')}>
+              Manage Users
+            </button>
+          </>
         )}
         {error && <div className="form-error">{error}</div>}
       </aside>
@@ -180,7 +183,8 @@ function MainApp() {
           <Route path="/" element={aiQuery ? null : <HomePage />} />
           <Route path="policies/:policyId" element={<PolicyViewerRoute />} />
           <Route path="policies/:policyId/history" element={<PolicyHistory />} />
-          <Route path="edit/:policyId" element={<RequireAuth><PolicyEditorRoute onSave={handleSave} onDelete={handleDelete} canDelete={canDelete} /></RequireAuth>} />
+          <Route path="edit/:policyId" element={<RequireAuth><PolicyEditorRoute categories={categories} onSave={handleSave} onDelete={handleDelete} canDelete={canDelete} /></RequireAuth>} />
+          <Route path="admin/categories" element={<RequireAuth><CategoryManagement onCategoriesChanged={reloadCategories} /></RequireAuth>} />
           <Route path="admin/users" element={<RequireAuth><UserManagement /></RequireAuth>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
