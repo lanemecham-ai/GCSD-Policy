@@ -142,7 +142,13 @@ function MainApp() {
     <div className="app-shell">
       <aside className="sidebar">
         <div className="brand">
-          <div className="brand-title">GCSD Policy Manager</div>
+          <button
+            className="brand-title brand-home-btn"
+            type="button"
+            onClick={() => { setAiQuery(null); navigate('/'); }}
+          >
+            GCSD Policy Manager
+          </button>
           <div className="brand-subtitle">Browse and manage policies by role</div>
         </div>
         <AISearch onSearch={handleSearch} />
