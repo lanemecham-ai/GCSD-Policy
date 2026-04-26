@@ -36,11 +36,8 @@ export default function PolicyList({ policies, categories }: Props) {
 
   const sortedCategories = useMemo(() => {
     const knownNames = categories.map((c) => c.name);
-    const all = Array.from(grouped.keys());
-    return [
-      ...knownNames.filter((n) => grouped.has(n)),
-      ...all.filter((n) => !knownNames.includes(n)).sort(),
-    ];
+    const ungrouped = Array.from(grouped.keys()).filter((n) => !knownNames.includes(n)).sort();
+    return [...knownNames, ...ungrouped];
   }, [grouped, categories]);
 
   function toggle(cat: string) {
