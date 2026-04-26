@@ -1,26 +1,18 @@
 import { FormEvent, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { aiSearch } from '../api';
 
 export default function AISearch() {
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
 
-  async function handleSubmit(e: FormEvent) {
+  function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!query.trim()) return;
-    setLoading(true);
-    setError('');
-    try {
-      const result = await aiSearch(query.trim());
-      navigate('/ai-search', { state: { query: query.trim(), result } });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Search failed. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+    const trimmed = query.trim();
+    if (!trimmed) return;
+    // Navigate immediately so the results page can stream the response in
+    // place. The page kicks off the request itself on mount.
+    navigate('/ai-search', { state: { query: trimmed } });
+    setQuery('');
   }
 
   return (
@@ -35,13 +27,11 @@ export default function AISearch() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Ask a policy question…"
-          disabled={loading}
         />
-        <button className="ai-search-button" type="submit" disabled={loading || !query.trim()}>
-          {loading ? '…' : '→'}
+        <button className="ai-search-button" type="submit" disabled={!query.trim()}>
+          →
         </button>
       </div>
-      {error && <div className="form-error">{error}</div>}
     </form>
   );
 }

@@ -1,14 +1,10 @@
+import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
+import { aiSearch, parseAISearchText } from '../api';
 import type { Policy } from '../types';
 
-type AIResult = {
-  summary: string;
-  policyIds: string[];
-};
-
 type LocationState = {
-  query: string;
-  result: AIResult;
+  query?: string;
 };
 
 type Props = {
@@ -18,8 +14,45 @@ type Props = {
 export default function AISearchResults({ policies }: Props) {
   const { state } = useLocation();
   const navigate = useNavigate();
+  const query = (state as LocationState | null)?.query ?? '';
 
-  if (!state?.result) {
+  const [streamedText, setStreamedText] = useState('');
+  const [done, setDone] = useState(false);
+  const [error, setError] = useState('');
+  const inFlightFor = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!query) return;
+    // Guard against React 18 StrictMode double-invocation kicking off two
+    // identical requests for the same query.
+    if (inFlightFor.current === query) return;
+    inFlightFor.current = query;
+
+    setStreamedText('');
+    setDone(false);
+    setError('');
+
+    let cancelled = false;
+    aiSearch(query, (fullText) => {
+      if (cancelled) return;
+      setStreamedText(fullText);
+    })
+      .then(() => {
+        if (cancelled) return;
+        setDone(true);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setError(err instanceof Error ? err.message : 'AI search failed.');
+        setDone(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [query]);
+
+  if (!query) {
     return (
       <div className="card">
         <p>No search results. Use the AI search bar to ask a question about district policy.</p>
@@ -27,8 +60,11 @@ export default function AISearchResults({ policies }: Props) {
     );
   }
 
-  const { query, result } = state as LocationState;
-  const referenced = policies.filter((p) => result.policyIds.includes(p.id));
+  // Live-parse the partial text so the trailing "POLICIES: ..." sentinel
+  // doesn't bleed into the visible summary while the model finishes streaming.
+  const parsed = parseAISearchText(streamedText);
+  const referenced = policies.filter((p) => parsed.policyIds.includes(p.id));
+  const summaryText = parsed.summary || (done ? '' : 'Thinking…');
 
   return (
     <div className="ai-results">
@@ -50,7 +86,14 @@ export default function AISearchResults({ policies }: Props) {
           </button>
         </div>
 
-        <div className="ai-summary">{result.summary}</div>
+        {error ? (
+          <div className="form-error">{error}</div>
+        ) : (
+          <div className="ai-summary">
+            {summaryText}
+            {!done && parsed.summary && <span className="ai-cursor">▍</span>}
+          </div>
+        )}
 
         {referenced.length > 0 && (
           <>
@@ -68,7 +111,7 @@ export default function AISearchResults({ policies }: Props) {
           </>
         )}
 
-        {referenced.length === 0 && result.policyIds.length > 0 && (
+        {done && referenced.length === 0 && parsed.policyIds.length > 0 && (
           <p style={{ color: '#6b7280', marginTop: 16, fontSize: 14 }}>
             Referenced policies could not be found. They may have been removed.
           </p>

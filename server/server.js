@@ -23,9 +23,45 @@ const SQL = await initSqlJs({
 });
 const db = fs.existsSync(DB_PATH) ? new SQL.Database(fs.readFileSync(DB_PATH)) : new SQL.Database();
 
-function saveDb() {
+// Debounced disk writes. sql.js keeps the whole database in memory and the
+// only way to persist is to dump the entire thing to disk, so calling this on
+// every single mutation (including the views++ on every page view) was the
+// app's biggest write hotspot. We coalesce writes that happen within 500ms
+// and force a synchronous flush on shutdown so nothing is lost.
+const SAVE_DEBOUNCE_MS = 500;
+let saveTimer = null;
+let dbDirty = false;
+
+function flushDb() {
+  if (saveTimer) {
+    clearTimeout(saveTimer);
+    saveTimer = null;
+  }
+  if (!dbDirty) return;
+  dbDirty = false;
   fs.writeFileSync(DB_PATH, Buffer.from(db.export()));
 }
+
+function saveDb() {
+  dbDirty = true;
+  if (saveTimer) return;
+  saveTimer = setTimeout(() => {
+    saveTimer = null;
+    try {
+      flushDb();
+    } catch (err) {
+      console.error('Failed to persist database:', err);
+    }
+  }, SAVE_DEBOUNCE_MS);
+}
+
+function shutdownAndFlush(signal) {
+  try { flushDb(); } catch (err) { console.error('Flush on shutdown failed:', err); }
+  if (signal) process.exit(0);
+}
+process.on('SIGINT', () => shutdownAndFlush('SIGINT'));
+process.on('SIGTERM', () => shutdownAndFlush('SIGTERM'));
+process.on('beforeExit', () => shutdownAndFlush(null));
 
 function run(sql, params = []) {
   const stmt = db.prepare(sql);
@@ -168,6 +204,9 @@ function initDatabase() {
     }
     console.log(`Seeded ${policies.length} policies.`);
   }
+
+  // Flush schema migrations + seed data to disk before accepting requests.
+  flushDb();
 }
 
 function createToken(user) {
@@ -211,6 +250,31 @@ function getUserById(id) {
 
 function getPolicyById(id) {
   return get('SELECT * FROM policies WHERE id = ?', [id]);
+}
+
+// Cached prompt payload for /ai-search. Rebuilt lazily on the next AI search
+// after any policy create/update/delete. Held in module scope so prompt
+// caching on the model side stays stable across requests.
+let policiesContextCache = null;
+
+function buildPoliciesContext() {
+  const policies = all('SELECT id, title, category, summary FROM policies ORDER BY title');
+  // Compact one-line-per-policy format. Less context = faster TTFT on the
+  // first request of a prompt-cache window. Format: "[id] title (category): summary"
+  return policies
+    .map((p) => `[${p.id}] ${p.title} (${p.category}): ${p.summary}`)
+    .join('\n');
+}
+
+function getPoliciesContext() {
+  if (policiesContextCache === null) {
+    policiesContextCache = buildPoliciesContext();
+  }
+  return policiesContextCache;
+}
+
+function invalidatePoliciesContextCache() {
+  policiesContextCache = null;
 }
 
 function createVersion(policyId, policyData, authorId) {
@@ -379,6 +443,7 @@ app.post('/policies', requireAuth, requireRole(['editor', 'admin']), (req, res) 
     [id, title, category, summary, content, now, now],
   );
   createVersion(id, { title, category, summary, content }, req.user.userId);
+  invalidatePoliciesContextCache();
   res.status(201).json(getPolicyById(id));
 });
 
@@ -399,6 +464,7 @@ app.put('/policies/:id', requireAuth, requireRole(['editor', 'admin']), (req, re
     [title, category, summary, content, now, req.params.id],
   );
   createVersion(req.params.id, { title, category, summary, content }, req.user.userId);
+  invalidatePoliciesContextCache();
   res.json(getPolicyById(req.params.id));
 });
 
@@ -410,6 +476,7 @@ app.delete('/policies/:id', requireAuth, requireRole(['admin']), (req, res) => {
 
   run('DELETE FROM policy_versions WHERE policyId = ?', [req.params.id]);
   run('DELETE FROM policies WHERE id = ?', [req.params.id]);
+  invalidatePoliciesContextCache();
   res.status(204).send();
 });
 
@@ -422,13 +489,19 @@ app.post('/ai-search', async (req, res) => {
     return res.status(503).json({ message: 'AI search is not configured. Set the ANTHROPIC_API_KEY environment variable.' });
   }
 
-  const policies = all('SELECT id, title, category, summary FROM policies ORDER BY title');
-  const policiesContext = policies
-    .map((p) => `ID: ${p.id}\nTitle: ${p.title}\nSection: ${p.category}\nSummary: ${p.summary}`)
-    .join('\n\n---\n\n');
+  const policiesContext = getPoliciesContext();
+
+  // Server-Sent Events so the browser can render tokens as they arrive.
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  if (typeof res.flushHeaders === 'function') res.flushHeaders();
+
+  const send = (event) => res.write(`data: ${JSON.stringify(event)}\n\n`);
 
   try {
-    const message = await anthropic.messages.create({
+    const stream = anthropic.messages.stream({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 256,
       system: [
@@ -436,10 +509,11 @@ app.post('/ai-search', async (req, res) => {
           type: 'text',
           text: `You are a helpful assistant for Garfield County School District's policy management system. Staff ask you questions about district policies and you help them find relevant policies.
 
-Respond ONLY with valid JSON in this exact format (no markdown, no code blocks):
-{"summary":"2-4 sentence explanation addressing the question and describing which policies apply","policyIds":["id-of-relevant-policy-1","id-of-relevant-policy-2"]}
+Respond in TWO parts, in this exact order:
+1. A 2-4 sentence plain-English answer to the staff question, naming the relevant policies inline.
+2. On a new line at the very end, the literal token "POLICIES:" followed by a comma-separated list of relevant policy IDs (e.g. POLICIES: policy-001, policy-002). If no policies match, write "POLICIES:" with nothing after it.
 
-Only include policy IDs that are directly relevant to the question. If no policies match, return an empty policyIds array and explain that in the summary.`,
+Do not use markdown, code blocks, or JSON. Only include policy IDs that are directly relevant.`,
           cache_control: { type: 'ephemeral' },
         },
       ],
@@ -461,23 +535,25 @@ Only include policy IDs that are directly relevant to the question. If no polici
       ],
     });
 
-    const text = message.content[0].text.trim();
-    let result;
-    try {
-      result = JSON.parse(text);
-    } catch {
-      const match = text.match(/\{[\s\S]*\}/);
-      if (match) {
-        result = JSON.parse(match[0]);
-      } else {
-        throw new Error('Unexpected response format from AI.');
+    for await (const event of stream) {
+      if (
+        event.type === 'content_block_delta' &&
+        event.delta &&
+        event.delta.type === 'text_delta' &&
+        event.delta.text
+      ) {
+        send({ type: 'delta', text: event.delta.text });
       }
     }
 
-    res.json({ summary: result.summary ?? '', policyIds: result.policyIds ?? [] });
+    send({ type: 'done' });
+    res.end();
   } catch (err) {
     console.error('AI search error:', err);
-    res.status(500).json({ message: 'AI search failed. Please try again.' });
+    try {
+      send({ type: 'error', message: 'AI search failed. Please try again.' });
+    } catch (_) {}
+    res.end();
   }
 });
 
