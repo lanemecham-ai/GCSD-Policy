@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { fetchPolicyVersions } from '../api';
 import type { PolicyVersion } from '../types';
 
 export default function PolicyHistory() {
   const { policyId } = useParams();
+  const navigate = useNavigate();
   const [versions, setVersions] = useState<PolicyVersion[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -28,7 +29,12 @@ export default function PolicyHistory() {
 
   return (
     <div className="card">
-      <h2 className="page-title">Version history</h2>
+      <div className="toolbar">
+        <h2 className="page-title">Version history</h2>
+        <button className="secondary-button" type="button" onClick={() => navigate(`/policies/${policyId}`)}>
+          Back to Policy
+        </button>
+      </div>
       {versions.length === 0 ? (
         <p>No versions found for this policy.</p>
       ) : (
