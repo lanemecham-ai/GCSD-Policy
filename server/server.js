@@ -251,6 +251,82 @@ app.get('/auth/me', requireAuth, (req, res) => {
   res.json(user);
 });
 
+app.get('/users', requireAuth, requireRole(['admin']), (req, res) => {
+  const users = all('SELECT id, username, role FROM users ORDER BY username');
+  res.json(users);
+});
+
+app.post('/users', requireAuth, requireRole(['admin']), (req, res) => {
+  const { username, password, role } = req.body;
+  if (!username?.trim() || !password || !role) {
+    return res.status(400).json({ message: 'Username, password, and role are required.' });
+  }
+  if (!['viewer', 'editor', 'admin'].includes(role)) {
+    return res.status(400).json({ message: 'Role must be viewer, editor, or admin.' });
+  }
+  if (getUserByUsername(username.trim())) {
+    return res.status(409).json({ message: 'A user with that username already exists.' });
+  }
+  const id = 'user-' + Date.now();
+  run('INSERT INTO users (id, username, passwordHash, role) VALUES (?, ?, ?, ?)', [
+    id, username.trim(), bcrypt.hashSync(password, 10), role,
+  ]);
+  res.status(201).json({ id, username: username.trim(), role });
+});
+
+app.put('/users/:id', requireAuth, requireRole(['admin']), (req, res) => {
+  const target = getUserById(req.params.id);
+  if (!target) {
+    return res.status(404).json({ message: 'User not found.' });
+  }
+  const { username, role, password } = req.body;
+  if (!username?.trim() || !role) {
+    return res.status(400).json({ message: 'Username and role are required.' });
+  }
+  if (!['viewer', 'editor', 'admin'].includes(role)) {
+    return res.status(400).json({ message: 'Role must be viewer, editor, or admin.' });
+  }
+  const existing = getUserByUsername(username.trim());
+  if (existing && existing.id !== req.params.id) {
+    return res.status(409).json({ message: 'A user with that username already exists.' });
+  }
+  // Prevent removing the last admin
+  if (target.role === 'admin' && role !== 'admin') {
+    const adminCount = get('SELECT COUNT(*) AS count FROM users WHERE role = ?', ['admin']).count;
+    if (adminCount <= 1) {
+      return res.status(400).json({ message: 'Cannot remove the last admin account.' });
+    }
+  }
+  if (password) {
+    run('UPDATE users SET username = ?, role = ?, passwordHash = ? WHERE id = ?', [
+      username.trim(), role, bcrypt.hashSync(password, 10), req.params.id,
+    ]);
+  } else {
+    run('UPDATE users SET username = ?, role = ? WHERE id = ?', [
+      username.trim(), role, req.params.id,
+    ]);
+  }
+  res.json(getUserById(req.params.id));
+});
+
+app.delete('/users/:id', requireAuth, requireRole(['admin']), (req, res) => {
+  const target = getUserById(req.params.id);
+  if (!target) {
+    return res.status(404).json({ message: 'User not found.' });
+  }
+  if (req.params.id === req.user.userId) {
+    return res.status(400).json({ message: 'You cannot delete your own account.' });
+  }
+  if (target.role === 'admin') {
+    const adminCount = get('SELECT COUNT(*) AS count FROM users WHERE role = ?', ['admin']).count;
+    if (adminCount <= 1) {
+      return res.status(400).json({ message: 'Cannot delete the last admin account.' });
+    }
+  }
+  run('DELETE FROM users WHERE id = ?', [req.params.id]);
+  res.status(204).send();
+});
+
 app.get('/policies', (req, res) => {
   const policies = all('SELECT * FROM policies ORDER BY updatedAt DESC');
   res.json(policies);

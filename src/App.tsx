@@ -12,6 +12,7 @@ import AISearch from './components/AISearch';
 import AISearchResults from './pages/AISearchResults';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
+import UserManagement from './pages/UserManagement';
 import { useAuth } from './contexts/AuthContext';
 
 function PolicyViewerRoute() {
@@ -144,6 +145,11 @@ function MainApp() {
             + New Policy
           </button>
         )}
+        {user?.role === 'admin' && (
+          <button className="secondary-button" type="button" onClick={() => navigate('/admin/users')}>
+            Manage Users
+          </button>
+        )}
         {error && <div className="form-error">{error}</div>}
       </aside>
 
@@ -155,6 +161,7 @@ function MainApp() {
           <Route path="policies/:policyId" element={<PolicyViewerRoute />} />
           <Route path="policies/:policyId/history" element={<PolicyHistory />} />
           <Route path="edit/:policyId" element={<RequireAuth><PolicyEditorRoute onSave={handleSave} onDelete={handleDelete} canDelete={canDelete} /></RequireAuth>} />
+          <Route path="admin/users" element={<RequireAuth><UserManagement /></RequireAuth>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>

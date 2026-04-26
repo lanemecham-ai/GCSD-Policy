@@ -89,6 +89,42 @@ export async function fetchPolicyVersions(id: string) {
   return handleResponse<PolicyVersion[]>(response);
 }
 
+export async function fetchUsers() {
+  const response = await fetch(`${API_BASE_URL}/users`, {
+    headers: { ...getAuthHeaders() } as HeadersInit,
+  });
+  return handleResponse<User[]>(response);
+}
+
+export async function createUser(data: { username: string; password: string; role: string }) {
+  const response = await fetch(`${API_BASE_URL}/users`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() } as HeadersInit,
+    body: JSON.stringify(data),
+  });
+  return handleResponse<User>(response);
+}
+
+export async function updateUser(id: string, data: { username: string; role: string; password?: string }) {
+  const response = await fetch(`${API_BASE_URL}/users/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() } as HeadersInit,
+    body: JSON.stringify(data),
+  });
+  return handleResponse<User>(response);
+}
+
+export async function deleteUser(id: string) {
+  const response = await fetch(`${API_BASE_URL}/users/${id}`, {
+    method: 'DELETE',
+    headers: { ...getAuthHeaders() } as HeadersInit,
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.message || 'Delete request failed');
+  }
+}
+
 export async function aiSearch(query: string) {
   const response = await fetch(`${API_BASE_URL}/ai-search`, {
     method: 'POST',

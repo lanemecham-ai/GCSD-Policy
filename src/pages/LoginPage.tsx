@@ -35,7 +35,7 @@ export default function LoginPage() {
         <form onSubmit={handleSubmit}>
           <div className="field-group">
             <label className="field-label">Username</label>
-            <input value={username} onChange={(event) => setUsername(event.target.value)} placeholder="admin" />
+            <input value={username} onChange={(event) => setUsername(event.target.value)} placeholder="Username" />
           </div>
           <div className="field-group">
             <label className="field-label">Password</label>
@@ -43,7 +43,7 @@ export default function LoginPage() {
               type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              placeholder="admin-password"
+              placeholder="Password"
             />
           </div>
           {error && <div className="form-error">{error}</div>}
