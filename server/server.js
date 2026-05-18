@@ -247,15 +247,13 @@ function initDatabase() {
     if (fs.existsSync(seedPath)) {
       try {
         const seedPolicies = JSON.parse(fs.readFileSync(seedPath, 'utf8'));
-        const updateStmt = db.prepare('UPDATE policies SET content = ? WHERE id = ?');
         let migrated = 0;
         for (const p of seedPolicies) {
           if (p.content && p.content.trimStart().startsWith('<')) {
-            updateStmt.run([p.content, p.id]);
+            run('UPDATE policies SET content = ? WHERE id = ?', [p.content, p.id]);
             migrated++;
           }
         }
-        updateStmt.free();
         console.log(`Migrated ${migrated} policies to HTML content.`);
       } catch (e) {
         console.warn('Content migration failed:', e.message);
